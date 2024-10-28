@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 
 class IlabApi(ua_generic_rest_api.GenericRestApi):
     """The object that holds the stache environment variables."""
+
     def __init__(self, core_id, auth_creds):
         host = f"https://api.ilabsolutions.com/v1/cores/{core_id}/"
         super().__init__(host, auth_creds, "page")

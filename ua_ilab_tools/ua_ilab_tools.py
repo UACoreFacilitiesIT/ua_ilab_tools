@@ -76,6 +76,42 @@ class IlabTools:
 
         return req_uri_to_soup
 
+    def create_service_request(self, payload):
+        """Create a new service request.
+
+        Arguments:
+            payload (string): The XML or JSON payload for the new service request.
+
+        Returns:
+            response: The response from the POST request, or an error message if it fails.
+        """
+        try:
+            response = self.api.post("service_requests.xml", payload)
+            return response
+        except Exception as e:
+            error_message = f"Error creating service request: {str(e)}"
+            return error_message
+
+    def update_service_request(self, service_request_id, payload):
+        """Update a specific service request.
+
+        Arguments:
+            service_request_id (string): The ID of the service request to update.
+            payload (string): The XML payload with fields to update.
+
+        Returns:
+            response: The response from the PUT request, or an error message if it fails.
+        """
+        try:
+            endpoint = f"service_requests/{service_request_id}.xml"
+            response = self.api.put(endpoint, payload)
+            return response
+        except Exception as e:
+            error_message = (
+                f"Error updating service request {service_request_id}: {str(e)}"
+            )
+            return error_message
+
     def get_service_cost(self, price_id):
         """Get the cost associated with the given service_id.
 
@@ -104,11 +140,11 @@ class IlabTools:
 
         return service_price
 
-    def get_request_charges(self, req_id):
-        """Get all of the charges of the req_id passed in.
+    def get_request_charges(self, service_request_id):
+        """Get all of the charges of the service_request_id passed in.
 
         Arguments:
-            req_id(string):
+            service_request_id(string):
                 The unique string of ints that map to a request.
 
         Returns:
@@ -116,7 +152,9 @@ class IlabTools:
                 The dict of uri_to_soup of all the charges associated with that
                 request. Returns an empty dict if not found.
         """
-        get_responses = self.api.get(f"service_requests/{req_id}/charges.xml")
+        get_responses = self.api.get(
+            f"service_requests/{service_request_id}/charges.xml"
+        )
         charge_paged_soups = [
             BeautifulSoup(response.text, "xml") for response in get_responses
         ]
@@ -127,6 +165,46 @@ class IlabTools:
                 charges_uri_soup[charge.find("id").string] = charge
 
         return charges_uri_soup
+
+    def create_request_charge(self, service_request_id, payload):
+        """Create a new charge for a service request.
+
+        Arguments:
+            service_request_id (string): The ID of the service request to which the charge will be added.
+            payload (string): The XML or JSON payload for the new charge.
+
+        Returns:
+            response: The response from the POST request, or an error message if it fails.
+        """
+        try:
+            response = self.api.post(
+                f"service_requests/{service_request_id}/charges.xml", payload
+            )
+            return response
+        except Exception as e:
+            error_message = (
+                f"Error creating charge for request {service_request_id}: {str(e)}"
+            )
+            return error_message
+
+    def update_request_charge(self, service_request_id, charge_id, payload):
+        """Update a specific charge for a service request.
+
+        Arguments:
+            service_request_id (string): The ID of the service request containing the charge.
+            charge_id (string): The ID of the charge to update.
+            payload (string): The XML payload with charge data to update.
+
+        Returns:
+            response: The response from the PUT request or error message.
+        """
+        try:
+            endpoint = f"service_requests/{service_request_id}/charges/{charge_id}.xml"
+            response = self.api.put(endpoint, payload)
+            return response
+        except Exception as e:
+            error_message = f"Error updating charge {charge_id} for service request {service_request_id}: {str(e)}"
+            return error_message
 
     def get_milestones(self, request_id):
         """Get all of the milestones associated with a service request.
@@ -154,11 +232,32 @@ class IlabTools:
 
         return milestone_name_soup
 
-    def get_custom_forms(self, req_id):
-        """Get all of the custom forms of the req_id passed in.
+    def update_milestone(self, service_request_id, milestone_id, payload):
+        """Update a specific milestone for a service request.
 
         Arguments:
-            req_id (string):
+            service_request_id (string): The ID of the service request containing the milestone.
+            milestone_id (string): The ID of the milestone to update.
+            payload (string): The XML payload with milestone data to update.
+
+        Returns:
+            response: The response from the PUT request or error message.
+        """
+        try:
+            endpoint = (
+                f"service_requests/{service_request_id}/milestones/{milestone_id}.xml"
+            )
+            response = self.api.put(endpoint, payload)
+            return response
+        except Exception as e:
+            error_message = f"Error updating milestone {milestone_id} for service request {service_request_id}: {str(e)}"
+            return error_message
+
+    def get_custom_forms(self, service_request_id):
+        """Get all of the custom forms of the service_request_id passed in.
+
+        Arguments:
+            service_request_id (string):
                 The unique string of ints that map to a request.
 
         Returns:
@@ -167,7 +266,9 @@ class IlabTools:
                 {custom form uris: form_soup}. Returns an empty dict if not
                 found.
         """
-        get_responses = self.api.get(f"service_requests/{req_id}/custom_forms.xml")
+        get_responses = self.api.get(
+            f"service_requests/{service_request_id}/custom_forms.xml"
+        )
         form_paged_soups = [
             BeautifulSoup(response.text, "xml") for response in get_responses
         ]
@@ -219,11 +320,11 @@ def extract_project_info(req_soup, full_name=False):
     return prj_info
 
 
-def extract_custom_form_info(req_id, form_id, form_soup):
+def extract_custom_form_info(service_request_id, form_id, form_soup):
     """Extract all of the fields passed into the form.
 
     Arguments:
-        req_id (String):
+        service_request_id (String):
             The unique string of ints that map to a request (URI).
         form_id (String):
             The unique string of ints that map to a form.
@@ -256,7 +357,7 @@ def extract_custom_form_info(req_id, form_id, form_soup):
 
     form_name = form_soup.find("name").string
     fields_soup = form_soup.find("fields")
-    form_info = api_types.CustomForm(form_name, req_id, form_id)
+    form_info = api_types.CustomForm(form_name, service_request_id, form_id)
 
     # Get all of the field information.
     for field_soup in fields_soup.find_all("field"):
@@ -272,7 +373,7 @@ def extract_custom_form_info(req_id, form_id, form_soup):
         except TypeError:
             raise TypeError(
                 f"The grid in the {form_info.name} form in request"
-                f" {form_info.req_id} has been filled out incorrectly. The"
+                f" {form_info.service_request_id} has been filled out incorrectly. The"
                 f" error message is: {traceback.format_exc()}"
             )
 
@@ -297,7 +398,7 @@ def extract_custom_form_info(req_id, form_id, form_soup):
         if len(set(sample_names)) != len(sample_names):
             raise ValueError(
                 f"There are two or more samples named the same thing in"
-                f" request {form_info.req_id}. Please review and edit your"
+                f" request {form_info.service_request_id}. Please review and edit your"
                 f" sample names."
             )
 
